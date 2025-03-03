@@ -1,0 +1,33 @@
+{
+    "tasks": [
+        "Product Grooming Session",
+        "Analyze requirements & design specs",
+        "Dev Grooming",
+        "Review QA test cases",
+        "Clarify requirements",
+        "Analyze specs",
+        "Document + Submit TDD",
+        "Review TDD",
+        "Resolve TDD comments",
+        "Code",
+        "Develop Unit tests",
+        "Pre-QA Testing",
+        "Testing",
+        "Review PR",
+        "Resolve PR comments",
+        "Release to QA",
+        "Triage defects",
+        "Release to production",
+        "Stand-up",
+        "Triage backlog",
+        "Triage Sentry",
+        "Data Analysis & Correction",
+        "Monitor & manage server infrastructure",
+        "Code on .NET",
+        "Hiring",
+        "Misc call with ",
+        "Performance Analysis",
+        "Training/Upskilling",
+        "Environment Setup"
+    ]
+}

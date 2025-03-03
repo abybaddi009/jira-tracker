@@ -1,0 +1,14 @@
+.venv
+.vscode
+
+build
+dist
+
+*.pyc
+
+.env
+
+logs/**
+
+*.db
+*.zip
