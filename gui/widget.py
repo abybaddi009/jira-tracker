@@ -234,13 +234,14 @@ class TimeTrackerWidget(QWidget):
     def update_button_states(self, task_active=False, task_paused=False):
         """Update button states based on whether a task is active"""
         # For paused tasks, allow start button to resume
-        self.start_button.setEnabled(
+        is_enabled = (
             (not task_active or task_paused)
             and hasattr(self, "jira_ticket")
-            and self.jira_ticket.text()
+            and self.jira_ticket.text() != ""
             and self.jira_ticket.text().startswith("WPM-")
             and len(self.jira_ticket.text()) > 5
         )
+        self.start_button.setEnabled(is_enabled)
         self.pause_button.setEnabled(task_active and not task_paused)
         self.stop_button.setEnabled(task_active or task_paused)
 

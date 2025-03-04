@@ -92,7 +92,7 @@ class NotificationManager:
 
     def _send_windows_notification(self, title, message, timeout=10, priority="normal"):
         """
-        Send a notification specifically for Windows using win10toast
+        Send a notification specifically for Windows using win11toast
 
         Args:
             title: Notification title
@@ -104,26 +104,24 @@ class NotificationManager:
             bool: True if the notification was sent successfully, False otherwise
         """
         try:
-            from win10toast import ToastNotifier
-            toaster = ToastNotifier()
-            
+            from win11toast import toast
+
             # Construct full title
             full_title = f"{self.app_name}: {title}"
-            
-            # Set icon based on priority
-            icon_path = None
-            if priority == "high":
-                icon_path = "SystemHand"  # Windows error icon
-            else:
-                icon_path = "SystemAsterisk"  # Windows info icon
+
+            # Set duration based on timeout
+            duration = "long" if timeout > 5 else "short"
+
+            # Set scenario based on priority
+            scenario = "alarm" if priority == "high" else "default" 
 
             # Show notification
-            toaster.show_toast(
-                full_title,
-                message,
-                icon_path=icon_path,
-                duration=timeout,
-                threaded=True  # Use threaded to prevent blocking
+            toast(
+                title=full_title,
+                body=message,
+                duration=duration,
+                scenario=scenario,
+                icon=None  # Can add custom icon path here if needed
             )
 
             # Play sound based on priority

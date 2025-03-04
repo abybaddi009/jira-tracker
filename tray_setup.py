@@ -55,7 +55,7 @@ def setup_tray_icon(app, widget):
     def quit_application():
         widget.close()
         app.quit()
-    
+
     quit_action = tray_menu.addAction("Quit")
     quit_action.triggered.connect(quit_application)
 
