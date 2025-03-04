@@ -16,6 +16,13 @@ def get_static_files():
     return static_files
 
 
+# Platform-specific packages
+platform_packages = []
+if sys.platform == "win32":
+    platform_packages = ["win11toast"]
+else:
+    platform_packages = ["dbus"]
+
 # Dependencies are automatically detected, but it might need fine tuning.
 build_exe_options = {
     "packages": [
@@ -30,6 +37,7 @@ build_exe_options = {
         "urllib",
         "datetime",
         "logging",
+        *platform_packages
     ],
     "excludes": [],
     "include_files": [*get_static_files(), "tasks_new.json", ".env.example"],
@@ -43,8 +51,6 @@ build_exe_options = {
 base = None
 if sys.platform == "win32":
     base = "Win32GUI"
-else:
-    build_exe_options["packages"].append("dbus")
 
 setup(
     name="TimeTracker",
