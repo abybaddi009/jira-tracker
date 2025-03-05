@@ -47,6 +47,9 @@ class TimeTrackerApp:
         # Add cleanup handler
         self.app.aboutToQuit.connect(self.cleanup)
 
+        # Track if we're really quitting
+        self.is_quitting = False
+
     def handle_start(self):
         try:
             task_name, ticket_number = self.widget.get_task_and_ticket()
@@ -101,12 +104,18 @@ class TimeTrackerApp:
 
     def cleanup(self):
         """Clean up resources before quitting"""
+        self.is_quitting = True
         if self.widget:
             if self.widget.main_window:
                 self.widget.main_window.close()
             self.widget.close()
         if self.tray_icon:
             self.tray_icon.hide()
+
+    def handle_quit(self):
+        """Handle quit action from tray menu"""
+        self.is_quitting = True
+        self.app.quit()
 
     def run(self):
         # Initialize database

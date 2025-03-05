@@ -53,8 +53,7 @@ def setup_tray_icon(app, widget):
     update_show_hide_action(widget.isVisible())
 
     def quit_application():
-        widget.close()
-        app.quit()
+        app.quit()  # Just call quit directly on the QApplication instance
 
     quit_action = tray_menu.addAction("Quit")
     quit_action.triggered.connect(quit_application)

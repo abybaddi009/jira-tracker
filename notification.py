@@ -154,7 +154,8 @@ class NotificationManager:
 
         try:
             # Convert timeout to milliseconds for DBus
-            timeout_ms = timeout * 1000
+            # For KDE, use -1 for system default timeout, 0 for persistent
+            timeout_ms = int(timeout * 1000) if timeout > 0 else -1
             full_title = f"{self.app_name}: {title}"
 
             bus = dbus.SessionBus()
@@ -166,13 +167,17 @@ class NotificationManager:
             )
 
             # Set appropriate urgency based on priority
-            hints = {}
+            hints = {
+                "desktop-entry": "time-tracker",  # Add application identifier
+                "resident": dbus.Boolean(False),  # Allow notification to be dismissed
+            }
+            
             if priority == "high":
-                hints = {"urgency": dbus.Byte(2)}
+                hints["urgency"] = dbus.Byte(2)
             elif priority == "low":
-                hints = {"urgency": dbus.Byte(0)}
+                hints["urgency"] = dbus.Byte(0)
             else:
-                hints = {"urgency": dbus.Byte(1)}
+                hints["urgency"] = dbus.Byte(1)
 
             # Send notification via DBus
             notify_interface.Notify(
@@ -182,7 +187,7 @@ class NotificationManager:
                 full_title,  # Summary/title
                 message,  # Body/message
                 [],  # Actions
-                hints,  # Hints including urgency
+                hints,  # Hints including urgency and resident flag
                 timeout_ms,  # Timeout in ms
             )
 

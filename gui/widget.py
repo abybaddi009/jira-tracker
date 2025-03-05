@@ -354,6 +354,5 @@ class TimeTrackerWidget(QWidget):
 
     def closeEvent(self, event):
         """Handle widget close event"""
-        if self.main_window:
-            self.main_window.close()
-        event.accept()
+        event.ignore()  # Prevent the widget from being destroyed
+        self.hide()     # Just hide the widget

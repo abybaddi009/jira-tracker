@@ -1,7 +1,7 @@
 import logging
 
 from PyQt6.QtCore import QDate, Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor, QBrush
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDateEdit,
@@ -37,6 +37,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.selected_tasks = set()
         self.logger = logging.getLogger(__name__)
+        self.edited_cells = set()  # Track edited cells
+        self.HIGHLIGHT_COLOR = QColor(217, 237, 255)  # Light blue color
+        self.loaded_tasks = []  # Store loaded tasks for comparison
+
+        # Track if we're really quitting
+        self.is_quitting = False
 
         self.table_headers = [
             {"name": "", "attr": None},  # Checkbox column
@@ -84,6 +90,7 @@ class MainWindow(QMainWindow):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
+            self.is_quitting = True  # Set flag to allow actual closing
             self.close()
 
     def initUI(self):
@@ -146,18 +153,23 @@ class MainWindow(QMainWindow):
         button_layout = QHBoxLayout()
         self.sync_button = QPushButton("Sync Selected to JIRA")
         self.sync_button.clicked.connect(self.sync_selected_tasks)
+        self.sync_button.setShortcut("Ctrl+J")
+        self.sync_button.setToolTip("Sync selected tasks to JIRA (Ctrl+J)")
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self.load_tasks_for_date)
+        self.refresh_button.setShortcut("Ctrl+R")
+        self.refresh_button.setToolTip("Refresh table (Ctrl+R)")
         self.recalculate_button = QPushButton("Recalculate Duration")
         self.recalculate_button.clicked.connect(self.recalculate_selected_durations)
+        self.recalculate_button.setShortcut("Ctrl+D")
+        self.recalculate_button.setToolTip("Recalculate duration for selected tasks (Ctrl+D)")
         self.delete_button = QPushButton("Delete Selected")
         self.delete_button.clicked.connect(self.delete_selected_tasks)
         self.delete_button.setVisible(False)
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_all_changes)
-
-        # Add shortcut for Ctrl+S
         self.save_button.setShortcut("Ctrl+S")
+        self.save_button.setToolTip("Save all changes (Ctrl+S)")
 
         button_layout.addWidget(self.sync_button)
         button_layout.addWidget(self.refresh_button)
@@ -213,12 +225,23 @@ class MainWindow(QMainWindow):
             selected_date = self.date_selector.date().toPyDate()
             tasks = get_tasks_for_date(selected_date)
             self.populate_table(tasks)
+            # Update the total hours label
+            self.update_total_hours_label()
         except Exception as e:
             self.logger.error(f"Error loading tasks for date: {e}")
             QMessageBox.critical(self, "Error", f"Failed to load tasks: {str(e)}")
 
     def populate_table(self, tasks):
+        """Populate table with tasks and store them for comparison"""
+        self.loaded_tasks = tasks  # Store tasks for later comparison
+        self.edited_cells.clear()
         self.table.setRowCount(len(tasks))
+
+        # Safely disconnect the itemChanged signal if it's connected
+        try:
+            self.table.itemChanged.disconnect(self.on_item_changed)
+        except TypeError:  # Signal was not connected
+            pass
 
         for row, task in enumerate(tasks):
             for col, header in enumerate(self.table_headers):
@@ -240,14 +263,16 @@ class MainWindow(QMainWindow):
                         item.setData(Qt.ItemDataRole.UserRole, task.task_id)
                     elif header["attr"] == "duration" and value is not None:
                         item = QTableWidgetItem(f"{value:.2f}")
-                    elif header["attr"] == "synced":
-                        item = QTableWidgetItem("Yes" if value else "No")
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    elif header["attr"] in ["synced", "worklog_id"]:
+                        item = QTableWidgetItem(str(value or ""))
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     else:
                         item = QTableWidgetItem(str(value or ""))
                     self.table.setItem(row, col, item)
 
-        # Update the total hours label
-        self.update_total_hours_label()
+        # Connect the itemChanged signal
+        self.table.itemChanged.connect(self.on_item_changed)
 
     def update_total_hours_label(self):
         """Calculate and update the total hours label from current tasks"""
@@ -282,6 +307,35 @@ class MainWindow(QMainWindow):
                 return row
         return -1
 
+    def on_item_changed(self, item):
+        """Handle when a cell is edited by the user"""
+        if not item:
+            return
+
+        row = item.row()
+        col = item.column()
+        
+        # Don't track changes for certain columns
+        header_attr = self.table_headers[col]["attr"]
+        if header_attr in ["duration", "synced", "worklog_id"] or header_attr is None:
+            return
+
+        # Get the original value from loaded_tasks
+        task = self.loaded_tasks[row]
+        original_value = str(getattr(task, header_attr) or "")
+        current_value = item.text()
+
+        # Compare and highlight if different
+        if original_value != current_value:
+            cell_id = (row, col)
+            self.edited_cells.add(cell_id)
+            item.setBackground(QBrush(self.HIGHLIGHT_COLOR))
+        else:
+            cell_id = (row, col)
+            if cell_id in self.edited_cells:
+                self.edited_cells.remove(cell_id)
+            item.setBackground(QBrush())
+
     def save_all_changes(self):
         """Save all modified rows to the database"""
         try:
@@ -297,11 +351,25 @@ class MainWindow(QMainWindow):
                 }
                 updates.append((task_id, update_data))
 
+            # Temporarily disconnect the itemChanged signal
+            self.table.itemChanged.disconnect(self.on_item_changed)
+
+            # Clear highlights from edited cells
+            for row, col in self.edited_cells:
+                item = self.table.item(row, col)
+                if item:
+                    item.setBackground(QBrush())
+
+            self.edited_cells.clear()
+
             for task_id, update_data in updates:
                 update_task(task_id, **update_data)
 
             # Update the total hours label
             self.update_total_hours_label()
+
+            # Reconnect the itemChanged signal
+            self.table.itemChanged.connect(self.on_item_changed)
 
             QMessageBox.information(self, "Success", "All changes saved successfully")
         except Exception as e:
@@ -387,3 +455,13 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error syncing to JIRA: {e}")
             QMessageBox.critical(self, "Error", f"Failed to sync to JIRA: {str(e)}")
+
+    def closeEvent(self, event):
+        """Handle window close event"""
+        if self.is_quitting:
+            # If we're actually quitting the app, accept the close event
+            event.accept()
+        else:
+            # Otherwise just hide the window
+            event.ignore()
+            self.hide()
