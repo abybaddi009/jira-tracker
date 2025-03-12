@@ -1,4 +1,5 @@
 import json
+import os
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
@@ -47,7 +48,8 @@ class TimeTrackerWidget(QWidget):
         self.notification_manager.set_widget(self)
         self.notification_timer = QTimer()
         self.notification_timer.timeout.connect(self.check_notification_triggers)
-        self.notification_timer.start(60000)  # Check for notifications every minute
+        # Check for notifications every minute
+        self.notification_timer.start(60000)
 
         # Add reminder tracker
         self.reminder_tracker = TimerReminderTracker(self)
@@ -214,12 +216,19 @@ class TimeTrackerWidget(QWidget):
             self.update_button_states()
 
     def load_tasks(self):
-        """Load tasks from tasks.json"""
+        """Load tasks from tasks_new.json"""
         try:
             tasks_path = resource_path("tasks_new.json")
-            with open(tasks_path, "r") as f:
-                data = json.load(f)
-                return data.get("tasks", [])
+            if os.path.exists(tasks_path):
+                with open(tasks_path, "r") as f:
+                    data = json.load(f)
+                    return data.get("tasks", [])
+            else:
+                logger.warning(
+                    f"Tasks file not found at {tasks_path}, using default tasks"
+                )
+                # Return default tasks if file doesn't exist
+                return ["Select a task"]
         except Exception as e:
             logger.error(f"Error loading tasks from {tasks_path}: {e}")
             return ["No tasks available"]
@@ -355,4 +364,4 @@ class TimeTrackerWidget(QWidget):
     def closeEvent(self, event):
         """Handle widget close event"""
         event.ignore()  # Prevent the widget from being destroyed
-        self.hide()     # Just hide the widget
+        self.hide()  # Just hide the widget

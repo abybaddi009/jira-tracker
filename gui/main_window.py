@@ -1,7 +1,7 @@
 import logging
 
 from PyQt6.QtCore import QDate, Qt
-from PyQt6.QtGui import QFont, QColor, QBrush
+from PyQt6.QtGui import QBrush, QColor, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDateEdit,
@@ -163,7 +163,9 @@ class MainWindow(QMainWindow):
         self.recalculate_button = QPushButton("Recalculate Duration")
         self.recalculate_button.clicked.connect(self.recalculate_selected_durations)
         self.recalculate_button.setShortcut("Ctrl+D")
-        self.recalculate_button.setToolTip("Recalculate duration for selected tasks (Ctrl+D)")
+        self.recalculate_button.setToolTip(
+            "Recalculate duration for selected tasks (Ctrl+D)"
+        )
         self.delete_button = QPushButton("Delete Selected")
         self.delete_button.clicked.connect(self.delete_selected_tasks)
         self.delete_button.setVisible(False)
@@ -324,7 +326,7 @@ class MainWindow(QMainWindow):
 
         row = item.row()
         col = item.column()
-        
+
         # Don't track changes for certain columns
         header_attr = self.table_headers[col]["attr"]
         if header_attr in ["duration", "synced", "worklog_id"] or header_attr is None:

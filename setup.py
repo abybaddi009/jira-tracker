@@ -37,7 +37,7 @@ build_exe_options = {
         "urllib",
         "datetime",
         "logging",
-        *platform_packages
+        *platform_packages,
     ],
     "excludes": [],
     "include_files": [*get_static_files(), "tasks_new.json", ".env.example"],

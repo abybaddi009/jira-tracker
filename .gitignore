@@ -1,5 +1,8 @@
+venv
 .venv
 .vscode
+
+*.spec
 
 build
 dist

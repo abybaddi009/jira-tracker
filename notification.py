@@ -113,7 +113,7 @@ class NotificationManager:
             duration = "long" if timeout > 5 else "short"
 
             # Set scenario based on priority
-            scenario = "alarm" if priority == "high" else "default" 
+            scenario = "alarm" if priority == "high" else "default"
 
             # Show notification
             toast(
@@ -121,7 +121,7 @@ class NotificationManager:
                 body=message,
                 duration=duration,
                 scenario=scenario,
-                icon=None  # Can add custom icon path here if needed
+                icon=None,  # Can add custom icon path here if needed
             )
 
             # Play sound based on priority
