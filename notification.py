@@ -153,42 +153,38 @@ class NotificationManager:
             return False
 
         try:
-            # Convert timeout to milliseconds for DBus
-            # For KDE, use -1 for system default timeout, 0 for persistent
-            timeout_ms = int(timeout * 1000) if timeout > 0 else -1
-            full_title = f"{self.app_name}: {title}"
-
-            bus = dbus.SessionBus()
-            notify_obj = bus.get_object(
-                "org.freedesktop.Notifications", "/org/freedesktop/Notifications"
-            )
-            notify_interface = dbus.Interface(
-                notify_obj, "org.freedesktop.Notifications"
-            )
-
-            # Set appropriate urgency based on priority
-            hints = {
-                "desktop-entry": "time-tracker",  # Add application identifier
-                "resident": dbus.Boolean(False),  # Allow notification to be dismissed
-            }
+            # Convert timeout to milliseconds
+            timeout_ms = int(timeout * 1000)
             
-            if priority == "high":
-                hints["urgency"] = dbus.Byte(2)
-            elif priority == "low":
-                hints["urgency"] = dbus.Byte(0)
-            else:
-                hints["urgency"] = dbus.Byte(1)
+            # Set up DBus interface
+            item = "org.freedesktop.Notifications"
+            notify_interface = dbus.Interface(
+                dbus.SessionBus().get_object(item, "/"+item.replace(".", "/")),
+                item
+            )
 
-            # Send notification via DBus
+            # Map priority to urgency level (0=low, 1=normal, 2=critical)
+            urgency = 1  # default normal
+            if priority == "high":
+                urgency = 2
+            elif priority == "low":
+                urgency = 0
+
+            # Set notification hints
+            hints = {
+                "urgency": dbus.Byte(urgency),
+            }
+
+            # Send notification
             notify_interface.Notify(
                 self.app_name,  # App name
-                0,  # Replaces ID
-                "",  # Icon (empty for default)
-                full_title,  # Summary/title
-                message,  # Body/message
-                [],  # Actions
-                hints,  # Hints including urgency and resident flag
-                timeout_ms,  # Timeout in ms
+                0,              # Replaces ID
+                "",            # Icon (empty for default)
+                title,         # Summary/title
+                message,       # Body/message
+                [],           # Actions
+                hints,        # Hints dictionary
+                timeout_ms    # Timeout in milliseconds
             )
 
             # Play sound based on priority
@@ -197,6 +193,7 @@ class NotificationManager:
 
             logger.debug(f"KDE notification sent via DBus: {title}")
             return True
+
         except Exception as e:
             logger.warning(f"Failed to send KDE notification via DBus: {e}")
             return False

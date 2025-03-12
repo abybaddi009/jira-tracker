@@ -30,6 +30,7 @@ from alchemy import (
 )
 from jira_integration import JiraCredentialsDialog, log_work_to_jira
 from time_tracking import calculate_duration
+from utils import format_duration
 
 
 class MainWindow(QMainWindow):
@@ -199,9 +200,12 @@ class MainWindow(QMainWindow):
                     end_time = self.table.item(row, 3).text()
 
                     new_duration = calculate_duration(start_time, end_time)
-
-                    # Update the duration in the table
-                    self.table.item(row, 4).setText(f"{new_duration:.2f}")
+                    duration_item = self.table.item(row, 4)
+                    
+                    # Update the duration display with formatted text
+                    duration_item.setText(format_duration(new_duration))
+                    # Store the raw duration value for calculations
+                    duration_item.setData(Qt.ItemDataRole.UserRole, new_duration)
 
                     # Update the duration in the database
                     update_task(task_id, duration=new_duration)
@@ -262,9 +266,15 @@ class MainWindow(QMainWindow):
                         item = QTableWidgetItem(value)
                         item.setData(Qt.ItemDataRole.UserRole, task.task_id)
                     elif header["attr"] == "duration" and value is not None:
-                        item = QTableWidgetItem(f"{value:.2f}")
+                        formatted_duration = format_duration(value)
+                        item = QTableWidgetItem(formatted_duration)
+                        # Store the raw duration value for calculations
+                        item.setData(Qt.ItemDataRole.UserRole, value)
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                    elif header["attr"] in ["synced", "worklog_id"]:
+                    elif header["attr"] == "synced":
+                        item = QTableWidgetItem("Yes" if value else "No")
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    elif header["attr"] == "worklog_id":
                         item = QTableWidgetItem(str(value or ""))
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     else:
@@ -279,14 +289,14 @@ class MainWindow(QMainWindow):
         total_hours = 0.0
         for row in range(self.table.rowCount()):
             duration_item = self.table.item(row, 4)
-            if duration_item and duration_item.text():
-                try:
-                    duration = float(duration_item.text())
+            if duration_item:
+                # Get the raw duration value stored in UserRole
+                duration = duration_item.data(Qt.ItemDataRole.UserRole)
+                if duration is not None:
                     total_hours += duration
-                except ValueError:
-                    pass
 
-        self.total_hours_label.setText(f"Total Hours: {total_hours:.2f}")
+        formatted_total = format_duration(total_hours)
+        self.total_hours_label.setText(f"Total Hours: {formatted_total}")
 
     def on_checkbox_changed(self, state):
         checkbox = self.sender()
@@ -342,11 +352,14 @@ class MainWindow(QMainWindow):
             updates = []
             for row in range(self.table.rowCount()):
                 task_id = self.table.item(row, 1).data(Qt.ItemDataRole.UserRole)
+                duration_item = self.table.item(row, 4)
+                duration = duration_item.data(Qt.ItemDataRole.UserRole) if duration_item else 0
+                
                 update_data = {
                     "task_name": self.table.item(row, 1).text(),
                     "start_time": self.table.item(row, 2).text(),
                     "end_time": self.table.item(row, 3).text(),
-                    "duration": float(self.table.item(row, 4).text() or 0),
+                    "duration": duration,
                     "jira_key": self.table.item(row, 5).text(),
                 }
                 updates.append((task_id, update_data))

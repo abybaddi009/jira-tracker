@@ -51,7 +51,6 @@ class TimerReminderTracker(QObject):
         self.notification_manager.send_notification(
             "Time Tracking Reminder",
             "You're not tracking any activity. Don't forget to log your time!",
-            timeout=10000,
-            priority="high",
+            timeout=10,
         )
         self.reminder_triggered.emit()
